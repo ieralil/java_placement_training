@@ -5,35 +5,44 @@ import java.io.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.awt.image.RescaleOp;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
-public class ImageEditor extends JFrame implements ActionListener {
+public class ImageEditor extends JFrame implements ActionListener, ChangeListener {
     public JSlider Brightness;
     public JSlider Contrast;
-    public JButton upload, adjust;
-    public JLabel Orginal, Altered;
-    public BufferedImage orginalImage;  // instance variable
-    public BufferedImage adjustedImage;  // instance variable
+    public JButton upload;
+    public JLabel Orginal;
+    public BufferedImage originalImage;  // instance variable
+    public BufferedImage alteredImage;   // instance variable to store the altered image
 
     public ImageEditor() {
         upload = new JButton("UPLOAD IMAGE");
         Brightness = new JSlider(JSlider.HORIZONTAL, -100, 100, 0);
         Contrast = new JSlider(JSlider.HORIZONTAL, -100, 100, 0);
-        adjust = new JButton("ADJUST");
-        Orginal = new JLabel("Orginal Image");
-        Altered = new JLabel("Altered");
-        JPanel p = new JPanel();
+        Orginal = new JLabel("Original Image");
+        JPanel imagePanel = new JPanel();
+        imagePanel.add(Orginal);
 
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new GridLayout(4, 1));
+        controlPanel.add(upload);
+        controlPanel.add(Brightness);
+        controlPanel.add(Contrast);
+
+        // Add labels for sliders
+        controlPanel.add(new JLabel("Brightness"));
+        controlPanel.add(new JLabel("Contrast"));
+
+        // Add listeners
         upload.addActionListener(this);
-        adjust.addActionListener(this);
+        Brightness.addChangeListener(this);
+        Contrast.addChangeListener(this);
 
-        p.setLayout(new GridLayout(5, 0));
-        p.add(upload);
-        p.add(Orginal);
-        p.add(Altered);
-        p.add(Brightness);
-        p.add(Contrast);
-        p.add(adjust);
-        add(p);
+        // Set layout for the main frame
+        setLayout(new BorderLayout());
+        add(imagePanel, BorderLayout.CENTER);
+        add(controlPanel, BorderLayout.EAST);
 
         setVisible(true);
         setSize(800, 600);
@@ -47,22 +56,28 @@ public class ImageEditor extends JFrame implements ActionListener {
             if (result == JFileChooser.APPROVE_OPTION) {
                 try {
                     File selectedFile = fileChooser.getSelectedFile();
-                    orginalImage = ImageIO.read(selectedFile);
-                    Orginal.setIcon(new ImageIcon(orginalImage));
+                    originalImage = ImageIO.read(selectedFile);
+                    Orginal.setIcon(new ImageIcon(originalImage));
+                    // Initialize alteredImage with a copy of the original image
+                    alteredImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), originalImage.getType());
+                    Graphics g = alteredImage.getGraphics();
+                    g.drawImage(originalImage, 0, 0, null);
+                    g.dispose();
                 } catch (Exception e) {
                     System.out.println("Failed To Upload Image");
                 }
             }
-        } else if (ae.getSource() == adjust) {
-            if (orginalImage != null) {
-                int brightnessValue = Brightness.getValue();
-                float contrastValue = 1.0f + (Contrast.getValue() / 100.0f);
-                RescaleOp rescaleOp = new RescaleOp(contrastValue,
-brightnessValue, null);
-                adjustedImage = rescaleOp.filter(orginalImage, null);
+        }
+    }
 
-                Altered.setIcon(new ImageIcon(adjustedImage));
-            }
+    // Update the altered image based on the current slider values
+    public void stateChanged(ChangeEvent e) {
+        if (originalImage != null) {
+            int brightnessValue = Brightness.getValue();
+            float contrastValue = 1.0f + (Contrast.getValue() / 100.0f);
+            RescaleOp rescaleOp = new RescaleOp(contrastValue, brightnessValue, null);
+            rescaleOp.filter(originalImage, alteredImage);
+            Orginal.setIcon(new ImageIcon(alteredImage));
         }
     }
 
@@ -70,4 +85,3 @@ brightnessValue, null);
         new ImageEditor();
     }
 }
-
